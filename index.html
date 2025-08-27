@@ -1,0 +1,803 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <a href="SERVER.JS">server</a>
+  <a href="HTML.HTML">Home</a>
+  <a href="package.json">package</a>
+  <a href="package-lock.json">package</a>
+  <a href=".json">package</a>
+  <a href="main.js">package</a>
+
+<meta charset="utf-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<title>BENAYAS LEULSEGED COMMUNITY — Messenger Demo</title>
+
+<!-- Inline CSS: improved visual design -->
+<style>
+:root{
+  --bg:#071029; --muted:#9fb2d6; --accent:#39d0d6; --accent2:#a78bfa;
+  --glass: rgba(255,255,255,0.04);
+  --card: rgba(10,18,28,0.6);
+  --round: 14px;
+}
+*{box-sizing:border-box}
+html,body{height:100%;margin:0;font-family:Inter,system-ui,Segoe UI,Roboto,Arial;color:#eaf6fb;background:#071029}
+body{
+  background:
+    radial-gradient(900px 400px at 10% 20%, rgba(57,208,214,0.06), transparent 12%),
+    radial-gradient(900px 400px at 90% 80%, rgba(167,139,250,0.04), transparent 12%),
+    linear-gradient(160deg,#071029 0%, #08182b 45%, #052033 100%);
+  -webkit-font-smoothing:antialiased;padding:22px;
+}
+
+/* container */
+.wrap{max-width:1200px;margin:0 auto;padding:16px;border-radius:16px}
+.header{display:flex;gap:14px;align-items:center;margin-bottom:14px}
+.logo{width:64px;height:64px;border-radius:12px;overflow:hidden;box-shadow:0 8px 30px rgba(2,6,23,.6)}
+.logo img{width:100%;height:100%;object-fit:cover}
+.title{line-height:1}
+.title h1{margin:0;font-size:20px}
+.title p{margin:0;color:var(--muted);font-size:13px}
+
+/* tabs */
+.tabs{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
+.tab{padding:8px 12px;border-radius:12px;background:var(--glass);cursor:pointer;border:1px solid rgba(255,255,255,0.03)}
+.tab.active{outline:3px solid rgba(57,208,214,0.06);box-shadow:0 10px 30px rgba(3,10,18,0.6)}
+
+/* page common */
+.page{display:none;border-radius:12px;padding:18px;min-height:72vh;background-repeat:no-repeat;background-size:cover;background-position:center}
+.page.active{display:block}
+.card{background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.08));padding:14px;border-radius:12px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 10px 30px rgba(2,6,23,.5)}
+.grid{display:grid;gap:12px}
+.grid-2{grid-template-columns:1fr 1fr}
+.small{color:var(--muted);font-size:13px}
+.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.btn{background:linear-gradient(90deg,var(--accent),var(--accent2));border:none;padding:10px 12px;border-radius:10px;color:#021219;font-weight:700;cursor:pointer}
+.btn.ghost{background:transparent;border:1px solid rgba(255,255,255,0.06);color:#eaf6fb}
+.input,textarea,select{width:100%;padding:10px;border-radius:10px;border:1px solid rgba(255,255,255,0.04);background:rgba(0,0,0,0.18);color:#eaf6fb}
+.text-muted{color:var(--muted)}
+.users{max-height:360px;overflow:auto;padding:8px;border-radius:10px;background:rgba(0,0,0,0.12)}
+.user{display:flex;gap:10px;align-items:center;padding:8px;border-radius:8px;cursor:pointer}
+.user:hover{background:rgba(255,255,255,0.02)}
+.user .av{width:42px;height:42px;border-radius:8px;overflow:hidden;background:linear-gradient(90deg,var(--accent),var(--accent2));display:flex;align-items:center;justify-content:center;color:#021219;font-weight:800}
+.badge{padding:6px 8px;border-radius:999px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.03)}
+
+/* chat area */
+.chat-panel{display:flex;gap:12px;align-items:flex-start}
+.chat-left{flex:0 0 300px}
+.chat-right{flex:1}
+.chatbox{height:380px;overflow:auto;padding:12px;border-radius:10px;background:rgba(0,0,0,0.14)}
+.msg{margin-bottom:10px;padding:8px;border-radius:10px}
+.msg.me{background:linear-gradient(90deg,#1e80ff10,#39d0d610);border-left:4px solid #39d0d6}
+.msg.their{background:rgba(255,255,255,0.03);border-left:4px solid rgba(167,139,250,0.6)}
+.controls{display:flex;gap:8px;margin-top:10px;align-items:center;flex-wrap:wrap}
+.videoLocal, .videoRemote{width:100%;height:auto;border-radius:10px;background:#000;display:block}
+
+/* footer */
+footer{margin-top:16px;color:var(--muted);text-align:center;font-size:13px}
+
+/* small responsive */
+@media(max-width:900px){ .grid-2{grid-template-columns:1fr} .chat-panel{flex-direction:column} .chat-left{width:100%} }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="header">
+    <div class="logo"><img src="logo.jpg" alt="logo" id="logoImg" onerror="this.style.display='none'"></div>
+    <div class="title">
+      <h1>BENAYAS LEULSEGED COMMUNITY</h1>
+      <p class="small">Secure demo messenger — P2P (same-origin) • for production use server & TURN</p>
+    </div>
+  </div>
+
+  <div class="tabs" id="tabs">
+    <div class="tab active" data-page="page-welcome">Welcome</div>
+    <div class="tab" data-page="page-accept">Accept</div>
+    <div class="tab" data-page="page-thanks">Thanks</div>
+    <div class="tab" data-page="page-join">Register/Login</div>
+    <div class="tab" data-page="page-chat">Messenger</div>
+  </div>
+
+  <!-- PAGE 1: Welcome (beni1.jpg) -->
+  <section id="page-welcome" class="page active" style="background-image: url('beni1.jpg')">
+    <div class="card grid grid-2">
+      <div>
+        <div class="badge">🤖 AI • Technology</div>
+        <h2>WELCOME TO BENAYAS LEULSEGED COMMUNITY CENTER</h2>
+        <p class="small">Use this demo to test local P2P messaging & calls between tabs on the same origin.</p>
+        <div class="row" style="margin-top:12px">
+          <button class="btn" id="toAccept">Next →</button>
+          <button class="btn ghost" id="aboutBtn">About</button>
+        </div>
+      </div>
+      <div>
+        <h3>Highlights</h3>
+        <ul class="small">
+          <li>Register with full profile (First, Last, Birth year → age)</li>
+          <li>Users panel lists all registered users (passwords never shown)</li>
+          <li>Real P2P Messaging (DataChannel), file transfer & video call (WebRTC)</li>
+          <li>Ringtone + accept/decline for incoming calls</li>
+        </ul>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE 2: Accept (bene.jpg) -->
+  <section id="page-accept" class="page" style="background-image: url('bene.jpg')">
+    <div class="card">
+      <h3>Terms & Privacy (Demo)</h3>
+      <p class="small">This demo stores account data in your browser (localStorage). For production use server-side storage and secure authentication (HTTPS).</p>
+      <div class="row" style="margin-top:12px">
+        <button class="btn ghost" id="acceptBack">← Back</button>
+        <button class="btn" id="acceptNext">Agree & Next →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE 3: Thanks (beni2.jpg) -->
+  <section id="page-thanks" class="page" style="background-image: url('beni2.jpg')">
+    <div class="card">
+      <h3>Thanks for joining</h3>
+      <p class="small">Create an account to use the messenger. Username **must** end with <code>@beni.com</code>.</p>
+      <div class="row" style="margin-top:12px">
+        <button class="btn ghost" id="thanksBack">← Back</button>
+        <button class="btn" id="gotoJoin">Create Account →</button>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE 4: Register / Login (beni.jpg) -->
+  <section id="page-join" class="page" style="background-image: url('beni.jpg')">
+    <div class="card grid grid-2">
+      <div>
+        <h3>Create Account</h3>
+        <div class="small">All fields required</div>
+        <div style="margin-top:10px">
+          <input id="firstName" class="input" placeholder="First name"><br>
+          <input id="lastName" class="input" placeholder="Last name"><br>
+          <input id="birthYear" class="input" placeholder="Birth year (e.g. 1995)"><br>
+          <input id="regUsername" class="input" placeholder="username (must end with @beni.com)"><br>
+          <input id="regPassword" type="password" class="input" placeholder="password"><br>
+          <div class="row" style="margin-top:10px">
+            <button class="btn" id="btnRegister">Register</button>
+            <button class="btn ghost" id="btnSeed">Seed Demo Admin</button>
+          </div>
+        </div>
+      </div>
+
+      <div>
+        <h3>Login</h3>
+        <input id="loginUser" class="input" placeholder="username@beni.com"><br>
+        <input id="loginPass" type="password" class="input" placeholder="password"><br>
+        <div class="row" style="margin-top:10px">
+          <button class="btn" id="btnLogin">Login</button>
+          <button class="btn ghost" id="joinBack">Back</button>
+        </div>
+        <div style="margin-top:8px" class="small">Demo admin: <code>benayasleulseged@beni.com</code> / <code>1XVBENI72</code></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- PAGE 5: Messenger (beni.jpg) -->
+  <section id="page-chat" class="page" style="background-image: url('beni.jpg')">
+    <div class="card">
+      <div class="row" style="justify-content:space-between;align-items:center">
+        <div>
+          <strong>Messenger</strong> <span class="small" id="meLabel">(not logged in)</span>
+        </div>
+        <div class="small">Status: <span id="statusBadge">offline</span></div>
+      </div>
+
+      <div class="chat-panel" style="margin-top:12px">
+        <!-- left: users -->
+        <div class="chat-left">
+          <div class="card small">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <strong>Users</strong>
+              <button class="btn ghost" id="refreshUsers">Refresh</button>
+            </div>
+            <div style="margin-top:8px" class="users" id="usersList"></div>
+          </div>
+        </div>
+
+        <!-- right: chat -->
+        <div class="chat-right">
+          <div class="card">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div><strong>Conversation</strong> <span class="small" id="peerLabel">no peer</span></div>
+              <div>
+                <button class="btn ghost" id="announceBtn">Announce</button>
+                <button class="btn ghost" id="logoutBtn">Logout</button>
+              </div>
+            </div>
+
+            <div id="chatBox" class="chatbox" style="margin-top:12px"></div>
+
+            <div class="controls" style="margin-top:10px">
+              <input id="peerInput" class="input" placeholder="peer username (or click user)">
+              <input id="messageInput" class="input" placeholder="Type a message">
+              <button class="btn" id="sendBtn">Send</button>
+            </div>
+
+            <div class="controls" style="margin-top:8px">
+              <label class="btn ghost">📁 <input id="fileInput" type="file" style="display:none"></label>
+              <button class="btn" id="sendFileBtn">Send File</button>
+              <button class="btn" id="startChatBtn">Start P2P Chat</button>
+              <button class="btn" id="startCallBtn">Start Video Call</button>
+            </div>
+
+            <div style="margin-top:10px; display:grid; gap:8px">
+              <video id="localVideo" class="videoLocal" autoplay muted playsinline style="display:none"></video>
+              <video id="remoteVideo" class="videoRemote" autoplay playsinline style="display:none"></video>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div style="margin-top:12px" class="small">Note: this demo uses BroadcastChannel for signaling — works on same origin (open two tabs).</div>
+    </div>
+  </section>
+
+  <footer>© <span id="year"></span> BENAYAS LEULSEGED • Demo</footer>
+</div>
+
+<!-- RINGTONE -->
+<audio id="ringTone" src="ring.mp3" preload="auto"></audio>
+
+<!-- Inline JS: presence, auth, WebRTC signaling (BroadcastChannel), DataChannel messaging, call handling -->
+<script>
+/* =========================
+   Config & Storage keys
+   ========================= */
+const USERS_KEY = "beni_users_v2";
+const MESSAGES_KEY = "beni_pending_msgs_v2";
+const AUTH_KEY = "beni_auth_v2";
+const CHANNEL_NAME = "beni_signaling_v2";
+
+const CHANNEL = new BroadcastChannel(CHANNEL_NAME);
+
+/* State */
+let me = null; // {sid, username}
+let knownSessions = {}; // sid -> {user, ts}
+let pc = null;
+let dataChannel = null;
+let localStream = null;
+let pendingFiles = {};
+let currentPeer = null; // peer username
+let pendingOutgoing = []; // messages to send when datachannel opens
+
+/* Helpers */
+const $ = sel => document.querySelector(sel);
+const $$ = sel => Array.from(document.querySelectorAll(sel));
+const now = () => Date.now();
+const sid = () => Math.random().toString(36).slice(2,10);
+const escapeHtml = s => (s||"").toString().replace(/[&<>'"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;',"'":'&#39;','"':'&quot;'}[c]));
+
+/* =========================
+   UI & Navigation
+   ========================= */
+const pageTabs = $$(".tab");
+pageTabs.forEach(t => t.addEventListener("click", ()=> openPage(t.dataset.page)));
+
+function openPage(pageId){
+  // map tab data-page to section ids
+  const mapping = {
+    "page-welcome":"page-welcome",
+    "page-accept":"page-accept",
+    "page-thanks":"page-thanks",
+    "page-join":"page-join",
+    "page-chat":"page-chat"
+  };
+  // activate
+  document.querySelectorAll(".page").forEach(p=>p.classList.remove("active"));
+  document.getElementById(mapping[pageId]).classList.add("active");
+  pageTabs.forEach(t=>t.classList.toggle("active", t.dataset.page===pageId));
+}
+
+/* page navigation short buttons */
+$("#toAccept").onclick = () => openPage("page-accept");
+$("#acceptBack").onclick = () => openPage("page-welcome");
+$("#acceptNext").onclick = () => openPage("page-thanks");
+$("#thanksBack").onclick = () => openPage("page-accept");
+$("#gotoJoin").onclick = () => openPage("page-join");
+$("#joinBack").onclick = () => openPage("page-thanks");
+
+/* year */
+$("#year").textContent = new Date().getFullYear();
+
+/* =========================
+   Users: register / login
+   ========================= */
+function load(key, def){ try{ return JSON.parse(localStorage.getItem(key)) ?? def; }catch(e){ return def; } }
+function save(key,val){ localStorage.setItem(key, JSON.stringify(val)); }
+
+function seedAdmin(){
+  const users = load(USERS_KEY,{});
+  if(!users["benayasleulseged@beni.com"]){
+    users["benayasleulseged@beni.com"] = {first:"Benayas", last:"Leulseged", birth:1990, username:"benayasleulseged@beni.com", password:"1XVBENI72"};
+    save(USERS_KEY, users);
+  }
+}
+seedAdmin();
+
+/* Register */
+$("#btnRegister").onclick = ()=>{
+  const first = $("#firstName").value.trim();
+  const last = $("#lastName").value.trim();
+  const birth = parseInt($("#birthYear").value.trim(),10);
+  const username = $("#regUsername").value.trim();
+  const password = $("#regPassword").value;
+  if(!first || !last || !birth || !username || !password) return alert("Fill all fields");
+  if(!username.endsWith("@beni.com")) return alert("Username must end with @beni.com");
+  const users = load(USERS_KEY,{});
+  if(users[username]) return alert("User already exists");
+  users[username] = {first,last,birth,username,password};
+  save(USERS_KEY, users);
+  alert("Registered successfully. Now login.");
+};
+
+/* Seed */
+$("#btnSeed").onclick = ()=>{ seedAdmin(); refreshUsersList(); alert("Admin created"); };
+
+/* Login */
+$("#btnLogin").onclick = ()=>{
+  const u = $("#loginUser").value.trim();
+  const p = $("#loginPass").value;
+  const users = load(USERS_KEY,{});
+  if(users[u] && users[u].password === p){
+    // set session (in sessionStorage)
+    me = {sid: sid(), user: u};
+    sessionStorage.setItem(AUTH_KEY, JSON.stringify(me));
+    $("#meLabel").textContent = u;
+    $("#statusBadge").textContent = "online";
+    announcePresence("join");
+    refreshUsersList();
+    showStoredMessages(u);
+    openPage("page-chat");
+    alert("Logged in as " + u);
+  } else alert("Invalid credentials");
+};
+
+/* Load session if exists */
+(function loadSession(){
+  try{
+    const s = JSON.parse(sessionStorage.getItem(AUTH_KEY) || "null");
+    if(s?.user){
+      me = s;
+      $("#meLabel").textContent = s.user;
+      $("#statusBadge").textContent = "online";
+      announcePresence("join");
+      refreshUsersList();
+      showStoredMessages(s.user);
+      openPage("page-chat");
+    }
+  }catch(e){}
+})();
+
+/* Logout */
+$("#logoutBtn").onclick = ()=>{ if(!me) return; CHANNEL.postMessage({type:'presence', action:'leave', user:me.user, sid:me.sid}); sessionStorage.removeItem(AUTH_KEY); me=null; $("#meLabel").textContent="(not logged in)"; $("#statusBadge").textContent="offline"; openPage("page-join"); };
+
+/* Update users list UI */
+function refreshUsersList(){
+  const users = load(USERS_KEY,{});
+  const ul = $("#usersList"); ul.innerHTML = "";
+  Object.keys(users).forEach(u=>{
+    const li = document.createElement("div"); li.className="user";
+    const av = document.createElement("div"); av.className="av"; av.textContent = (users[u].first||u[0]).slice(0,2).toUpperCase();
+    const meta = document.createElement("div");
+    const nameLine = document.createElement("div"); nameLine.innerHTML = `<strong>${escapeHtml(users[u].first||"") } ${escapeHtml(users[u].last||"")}</strong>`;
+    const unameLine = document.createElement("div"); unameLine.className="small"; unameLine.textContent = u + (isUserOnline(u) ? " • online" : " • offline");
+    meta.appendChild(nameLine); meta.appendChild(unameLine);
+    li.appendChild(av); li.appendChild(meta);
+    li.onclick = ()=>{ $("#peerInput").value = u; $("#peerLabel").textContent = "peer: "+u; currentPeer = u; };
+    ul.appendChild(li);
+  });
+}
+function isUserOnline(username){
+  return Object.values(knownSessions).some(s=>s.user===username);
+}
+$("#refreshUsers").onclick = refreshUsersList;
+$("#announceBtn").onclick = ()=>{ announcePresence("join"); alert("Announced online"); };
+
+/* presence via BroadcastChannel */
+CHANNEL.addEventListener("message", (ev)=>{
+  const m = ev.data;
+  if(!m || !m.type) return;
+  if(m.type === "presence"){
+    if(m.action === "join"){ knownSessions[m.sid] = {user: m.user, ts: now()}; }
+    if(m.action === "leave"){ delete knownSessions[m.sid]; }
+    refreshUsersList();
+  }
+  if(m.type === "signal" && me && m.to === me.user){
+    // signaling payload for WebRTC
+    handleSignal(m);
+  }
+});
+function announcePresence(action){
+  if(!me) return;
+  CHANNEL.postMessage({type:'presence', action, user: me.user, sid: me.sid, ts: now()});
+  knownSessions[me.sid] = {user: me.user, ts: now()};
+  refreshUsersList();
+}
+
+/* =========================
+   Signaling & WebRTC logic
+   ========================= */
+const RTC_CFG = { iceServers: [ { urls: "stun:stun.l.google.com:19302" } ] };
+
+async function createPeerConnection(remoteUser, isCaller=false){
+  closeConnection(); // close previous
+  pc = new RTCPeerConnection(RTC_CFG);
+
+  // create data channel for chat/files when caller
+  if(isCaller){
+    dataChannel = pc.createDataChannel("chat");
+    setupDataChannel(remoteUser);
+  } else {
+    pc.ondatachannel = (ev)=>{ dataChannel = ev.channel; setupDataChannel(remoteUser); };
+  }
+
+  // handle remote tracks
+  pc.ontrack = ev => {
+    $("#remoteVideo").style.display = "block";
+    $("#remoteVideo").srcObject = ev.streams[0];
+  };
+
+  pc.onicecandidate = ev => {
+    if(ev.candidate){
+      sendSignal(remoteUser, {type:'candidate', cand: ev.candidate});
+    }
+  };
+
+  return pc;
+}
+
+function setupDataChannel(remoteUser){
+  dataChannel.onopen = ()=> {
+    writeSystem("Data channel open with " + remoteUser);
+    // send pending messages for this peer
+    flushPendingForPeer(remoteUser);
+  };
+  dataChannel.onmessage = ev => {
+    try{
+      if(typeof ev.data === "string"){
+        const o = JSON.parse(ev.data);
+        if(o.type === 'chat'){ appendMessage(o.from, o.text, false); }
+        else if(o.type === 'link'){ appendMessage(o.from, "🔗 "+o.href, false); }
+        else if(o.type === 'file-meta'){ pendingFiles[o.fileId]={meta:o, chunks:[]}; writeSystem("Receiving file: "+o.name); }
+        else if(o.type === 'file-end'){
+          const pf = pendingFiles[o.fileId];
+          if(pf){
+            const blob = new Blob(pf.chunks, {type:pf.meta.type});
+            const url = URL.createObjectURL(blob);
+            appendFileMessage(pf.meta.from, pf.meta.name, url);
+            delete pendingFiles[o.fileId];
+          }
+        }
+      } else if(ev.data instanceof ArrayBuffer){
+        // push chunk to first pending file
+        const key = Object.keys(pendingFiles)[0];
+        if(key) pendingFiles[key].chunks.push(ev.data);
+      }
+    }catch(e){ console.error(e); }
+  };
+}
+
+/* Signaling send/receive */
+function sendSignal(toUser, payload){
+  if(!me) return;
+  CHANNEL.postMessage({type:'signal', from: me.user, sid: me.sid, to: toUser, payload});
+}
+
+async function startChat(remoteUser){
+  if(!me) return alert("Login first");
+  if(!remoteUser) return alert("Select peer");
+  currentPeer = remoteUser;
+  $("#peerLabel").textContent = "peer: " + remoteUser;
+  // create pc & datachannel
+  await createPeerConnection(remoteUser, true);
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  sendSignal(remoteUser, {action:'offer', desc:offer});
+  writeSystem("Offer sent to "+remoteUser);
+}
+
+async function handleSignal(msg){
+  const payload = msg.payload;
+  const from = msg.from;
+  if(payload.action === 'offer'){
+    // ask user to accept incoming session (chat/call)
+    const accept = confirm("Incoming session from "+from+". Accept?");
+    if(!accept){ sendSignal(from, {action:'reject'}); return; }
+    // create peer, set remote desc, answer
+    await createPeerConnection(from, false);
+    await pc.setRemoteDescription(new RTCSessionDescription(payload.desc));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    sendSignal(from, {action:'answer', desc:answer});
+    writeSystem("Answered offer from "+from);
+  } else if(payload.action === 'answer'){
+    if(!pc) return;
+    await pc.setRemoteDescription(new RTCSessionDescription(payload.desc));
+    writeSystem("Received answer");
+  } else if(payload.action === 'candidate'){
+    if(!pc) return;
+    try{ await pc.addIceCandidate(new RTCIceCandidate(payload.cand)); }catch(e){console.warn(e)}
+  } else if(payload.action === 'reject'){
+    writeSystem("Peer rejected the session");
+    closeConnection();
+  } else if(payload.action === 'bye'){
+    writeSystem("Peer hung up");
+    closeConnection();
+  }
+}
+
+/* Close connection */
+function closeConnection(){
+  if(dataChannel){ try{ dataChannel.close(); }catch(e){} dataChannel=null; }
+  if(pc){ try{ pc.close(); }catch(e){} pc=null; }
+  if(localStream){ localStream.getTracks().forEach(t=>t.stop()); localStream=null; }
+  $("#localVideo").style.display="none"; $("#remoteVideo").style.display="none";
+}
+
+/* =========================
+   Chat UI helpers
+   ========================= */
+function appendMessage(from, text, isLocal){
+  const cb = $("#chatBox");
+  const d = document.createElement("div"); d.className = "msg " + (isLocal ? "me":"their");
+  d.innerHTML = `<strong>${escapeHtml(from)}</strong><div style="margin-top:6px">${escapeHtml(text)}</div>`;
+  cb.appendChild(d); cb.scrollTop = cb.scrollHeight;
+}
+function appendFileMessage(from, name, url){
+  const cb = $("#chatBox");
+  const d = document.createElement("div"); d.className="msg their";
+  d.innerHTML = `<strong>${escapeHtml(from)}</strong><div style="margin-top:6px"><a href="${url}" download="${escapeHtml(name)}">📎 ${escapeHtml(name)}</a></div>`;
+  cb.appendChild(d); cb.scrollTop = cb.scrollHeight;
+}
+function writeSystem(txt){
+  const cb = $("#chatBox");
+  const d = document.createElement("div"); d.className="msg"; d.style.opacity="0.7";
+  d.innerHTML = `<em>${escapeHtml(txt)}</em>`; cb.appendChild(d); cb.scrollTop = cb.scrollHeight;
+}
+
+/* =========================
+   Sending messages & files
+   ========================= */
+$("#sendBtn").onclick = ()=>{
+  const to = $("#peerInput").value.trim();
+  const text = $("#messageInput").value.trim();
+  if(!to || !text) return alert("Choose peer and write message");
+  // if dataChannel open => send
+  const payload = {type:'chat', from: me.user, text};
+  if(dataChannel && dataChannel.readyState === "open"){
+    dataChannel.send(JSON.stringify(payload));
+    appendMessage(me.user, text, true);
+    $("#messageInput").value="";
+  } else {
+    // save pending (offline) to localStorage, and queue for sending later
+    const msgs = load(MESSAGES_KEY,[]);
+    msgs.push({from:me.user,to:to,body:text,ts:now(),sent:false});
+    save(MESSAGES_KEY,msgs);
+    pendingOutgoing.push({to,payload});
+    appendMessage(me.user, text, true);
+    $("#messageInput").value="";
+    writeSystem("Message saved locally and will be sent when peer connects");
+  }
+};
+
+/* Flush pending messages intended for a peer when dataChannel opens */
+function flushPendingForPeer(peer){
+  if(!peer || !dataChannel || dataChannel.readyState !== "open") return;
+  // send queued outgoing for this peer
+  const remaining = [];
+  pendingOutgoing.forEach(q=>{
+    if(q.to === peer){
+      dataChannel.send(JSON.stringify(q.payload));
+    } else remaining.push(q);
+  });
+  pendingOutgoing = remaining;
+
+  // send stored messages in localStorage intended for peer
+  const msgs = load(MESSAGES_KEY,[]);
+  const unsent = msgs.filter(m=>m.to===peer && m.from===me.user && !m.sent);
+  unsent.forEach(m=>{
+    try{ dataChannel.send(JSON.stringify({type:'chat', from:m.from, text:m.body})); m.sent=true; } catch(e){}
+  });
+  save(MESSAGES_KEY, msgs.filter(m=>!m.sent));
+}
+
+/* File sending: chunking */
+$("#sendFileBtn").onclick = async ()=>{
+  const to = $("#peerInput").value.trim();
+  const f = $("#fileInput").files && $("#fileInput").files[0];
+  if(!to || !f) return alert("Select peer & file");
+  if(!dataChannel || dataChannel.readyState !== "open") return alert("Peer not connected for file transfer");
+  const fileId = sid();
+  // send metadata
+  dataChannel.send(JSON.stringify({type:'file-meta', fileId, name:f.name, size:f.size, type:f.type, from:me.user}));
+  // read and send slices
+  const chunkSize = 64*1024;
+  let offset = 0;
+  while(offset < f.size){
+    const slice = f.slice(offset, offset+chunkSize);
+    const ab = await slice.arrayBuffer();
+    dataChannel.send(ab);
+    offset += ab.byteLength;
+  }
+  dataChannel.send(JSON.stringify({type:'file-end', fileId}));
+  writeSystem("File sent: " + f.name);
+};
+
+/* =========================
+   Video call: ringtone & accept flow
+   ========================= */
+const ringAudio = $("#ringTone");
+
+$("#startCallBtn").onclick = async ()=>{
+  const to = $("#peerInput").value.trim();
+  if(!me) return alert("Login first");
+  if(!to) return alert("Select peer");
+  // get local stream and add tracks to pc then offer
+  try{
+    localStream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+    $("#localVideo").srcObject = localStream; $("#localVideo").style.display="block";
+    await createPeerConnection(to, true);
+    localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+    const offer = await pc.createOffer();
+    await pc.setLocalDescription(offer);
+    sendSignal(to, {action:'offer', desc:offer, call:true});
+    writeSystem("Calling "+to+" ...");
+  }catch(e){ alert("Camera/mic error: " + e.message); }
+};
+
+/* Handle incoming offer with call flag: ring and show accept dialog */
+async function handleOffer(desc, from, call=false){
+  // play ring and prompt
+  if(call){
+    ringAudio.loop = true; ringAudio.play().catch(()=>{});
+    const accept = confirm("Incoming call from " + from + ". Accept?");
+    ringAudio.pause(); ringAudio.currentTime = 0;
+    if(!accept){ sendSignal(from, {action:'reject'}); return; }
+    // accept: get media, create pc, answer
+    try{
+      localStream = await navigator.mediaDevices.getUserMedia({video:true,audio:true});
+      $("#localVideo").srcObject = localStream; $("#localVideo").style.display="block";
+    }catch(e){ alert("Camera/mic error: " + e.message); return; }
+    await createPeerConnection(from, false);
+    localStream.getTracks().forEach(t=>pc.addTrack(t, localStream));
+    await pc.setRemoteDescription(new RTCSessionDescription(desc));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    sendSignal(from, {action:'answer', desc:answer});
+    writeSystem("Answered call from " + from);
+  } else {
+    // plain data-channel chat offer (non-call)
+    await createPeerConnection(from, false);
+    await pc.setRemoteDescription(new RTCSessionDescription(desc));
+    const answer = await pc.createAnswer();
+    await pc.setLocalDescription(answer);
+    sendSignal(from, {action:'answer', desc:answer});
+    writeSystem("Answered chat offer from " + from);
+  }
+}
+
+/* General incoming signal handler */
+async function handleSignal(msg){
+  const from = msg.from;
+  const p = msg.payload;
+  if(p.action === 'offer'){
+    await handleOffer(p.desc, from, !!p.call);
+  } else if(p.action === 'answer'){
+    if(pc) await pc.setRemoteDescription(new RTCSessionDescription(p.desc));
+    writeSystem("Remote answered");
+  } else if(p.action === 'candidate'){
+    if(pc) try{ await pc.addIceCandidate(new RTCIceCandidate(p.cand)); }catch(e){}
+  } else if(p.action === 'reject'){
+    writeSystem("Peer rejected session");
+    closeConnection();
+  } else if(p.action === 'bye'){
+    writeSystem("Peer hung up");
+    closeConnection();
+  }
+}
+
+/* Hook BroadcastChannel "signal" messages path */
+CHANNEL.addEventListener("message", ev=>{
+  const m = ev.data;
+  if(!m || m.type !== 'signal') return;
+  if(!me) return;
+  if(m.to !== me.user) return; // ignore if not to me
+  // deliver to handler
+  handleSignal(m);
+});
+
+/* Overwrite previous sendSignal to include type envelope */
+function sendSignal(toUser, payload){
+  if(!me) return;
+  CHANNEL.postMessage({type:'signal', from: me.user, sid: me.sid, to: toUser, payload});
+}
+
+/* =========================
+   Presence & known session handling (announce)
+   ========================= */
+CHANNEL.addEventListener("message", ev=>{
+  const m = ev.data;
+  if(!m || m.type !== 'presence') return;
+  if(m.action === 'join') knownSessions[m.sid] = {user:m.user, ts:now()};
+  if(m.action === 'leave') delete knownSessions[m.sid];
+  refreshUsersList();
+});
+
+/* show stored local messages (fallback) */
+function showStoredMessages(user){
+  const msgs = load(MESSAGES_KEY,[]);
+  msgs.filter(m=>m.from===user || m.to===user).forEach(m=>{
+    appendMessage(m.from, m.body, m.from===user);
+  });
+}
+
+/* initial refresh */
+refreshUsersList();
+
+/* Expose startChat button */
+$("#startChatBtn").onclick = ()=> { const p = $("#peerInput").value.trim(); if(!p) return alert("Choose a peer"); startChat(p); };
+
+/* startChat wrapper: create offer for chat only */
+async function startChat(remoteUser){
+  if(!me) return alert("Login first");
+  await createPeerConnection(remoteUser, true);
+  const offer = await pc.createOffer();
+  await pc.setLocalDescription(offer);
+  sendSignal(remoteUser, {action:'offer', desc:offer, call:false});
+  writeSystem("Sent chat offer to "+remoteUser);
+}
+
+/* Utility: start call handled earlier via #startCallBtn (alias) */
+$("#startCallBtn")?.addEventListener?.("click", ()=> $("#startCallBtn").click());
+$("#startCallBtn").onclick = function(){ $("#startCallBtn").dispatchEvent(new Event('click')); };
+
+/* Show stored unsent messages in UI */
+(function showPending(){
+  const pending = load(MESSAGES_KEY,[]);
+  if(pending.length) writeSystem("You have "+pending.length+" pending messages saved locally.");
+})();
+
+/* make sure we map incoming 'signal' messages earlier - remove duplicates */
+CHANNEL.addEventListener("message", ev => {
+  // presence & signal handled above; ignore
+});
+
+/* =========================
+   Init small handlers
+   ========================= */
+$("#peerInput").addEventListener("input", ()=> { $("#peerLabel").textContent = "peer: " + ($("#peerInput").value || "—"); currentPeer = $("#peerInput").value.trim(); });
+$("#fileInput").addEventListener("change", ()=> { /* file chosen */ });
+$("#sendFileBtn").addEventListener("click", ()=> { $("#sendFileBtn").dispatchEvent(new Event('click')); });
+
+/* Helper to refresh users list (UI + online markers) */
+function refreshUsersList(){
+  const users = load(USERS_KEY,{});
+  const ul = $("#usersList"); ul.innerHTML = "";
+  Object.keys(users).forEach(u=>{
+    const e = document.createElement("div"); e.className="user";
+    const av = document.createElement("div"); av.className="av"; av.textContent = (users[u].first||u[0]).slice(0,2).toUpperCase();
+    const meta = document.createElement("div");
+    const n = document.createElement("div"); n.innerHTML = `<strong>${escapeHtml(users[u].first)} ${escapeHtml(users[u].last)}</strong>`;
+    const uline = document.createElement("div"); uline.className="small"; uline.textContent = u + (isUserOnline(u) ? " • online" : " • offline");
+    meta.appendChild(n); meta.appendChild(uline);
+    e.appendChild(av); e.appendChild(meta);
+    e.onclick = ()=>{ $("#peerInput").value = u; currentPeer = u; $("#peerLabel").textContent = "peer: "+u; };
+    ul.appendChild(e);
+  });
+}
+
+function isUserOnline(username){ return Object.values(knownSessions).some(s => s.user === username); }
+
+/* Handle incoming BroadcastChannel messages for signal/presence already set above */
+
+/* Output ready */
+writeSystem("Demo ready. Seed admin or register and login. Open two tabs to test P2P.");
+</script>
+</body>
+</html>
